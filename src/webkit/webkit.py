@@ -40,7 +40,6 @@ def get_random_headers() -> dict:
 def sanitize_url(url: str) -> str:
     logger.debug(f"Sanitizing {url = }")
     url = url.strip()
-    # 2024-07-03 01:46:54.119 | DEBUG    | __main__:sanitize_url:52 - parsed_url = ParseResult(scheme='https', netloc='www.ajrlewis.com', path='', params='', query='', fragment='')
     parsed_url = urlparse(url)
 
     # scheme
@@ -88,9 +87,11 @@ def sanitize_url(url: str) -> str:
 
 def get_response(url: str) -> requests.models.Response:
     headers = get_random_headers()
+    logger.debug(f"{headers = }")
     response = requests.get(
         url, headers=headers, verify=True, allow_redirects=True, timeout=20
     )
+    logger.debug(f"{response = }")
     response.raise_for_status()
     return response
 
@@ -103,8 +104,17 @@ def check_website_exists(url: str) -> bool:
         return False
 
 
-def scrape_website_for_text(url: str) -> tuple[str, str]:
+def scrape_website_for_text(url: str) -> dict:
     logger.debug(f"Scraping website for text {url = }")
+
+    data = {
+        "url": "",
+        "text": "",
+        "content_type": "",
+        "scraped_on": f"{datetime.datetime.utcnow()}",
+        "is_reachable": False,
+        "error": "",
+    }
 
     # sanitize the  url
     try:
@@ -112,18 +122,28 @@ def scrape_website_for_text(url: str) -> tuple[str, str]:
     except:
         pass
 
+    data["url"] = url
+
+    # get the content type returned
+    content_type = requests.head(url).headers["Content-Type"]
+    data["content_type"] = content_type
+
     # get the website response
     try:
         response = get_response(url)
     except requests.exceptions.RequestException as e:
-        print(f"{__name__}.scrape_website_for_text", "Failed to get response", e)
+        logger.debug(f"Failed to get response {e = }")
         text, error = scrape_dynamic_website_for_text(url)
-        if text:
-            return text, ""
-        return "", f"{e}. {error}"
+        data["text"] = text
+        data["error"] = error
+        is_reachable = len(text) > 0 and len(error) == 0
+        data["is_reachable"] = is_reachable
+        return data
 
     # get the content type returned
     content_type = response.headers.get("content-type", "")
+    logger.debug(f"{content_type = }")
+    data["content_type"] = content_type
     response_is_xml = "xml" in content_type
     if response_is_xml:
         parser = "lxml-xml"
@@ -131,9 +151,10 @@ def scrape_website_for_text(url: str) -> tuple[str, str]:
     else:
         parser = "html.parser"
         markup = response.text
-    text = ""
 
-    # try to extract the text or content
+    # try to extract the text
+    text = ""
+    error = ""
     try:
         soup = BeautifulSoup(markup, parser)
         if response_is_xml:
@@ -147,120 +168,82 @@ def scrape_website_for_text(url: str) -> tuple[str, str]:
         else:
             text = soup.body.get_text(" ", strip=True)
     except Exception as e:
-        return "", f"BeautifulSoup unable to extract body from response text {e}."
+        data["error"] = f"BeautifulSoup unable to extract body from response text {e}."
+        return data
 
-    # try to extract the text or content
-    if not text:
-        print(f"{__name__}.scrape_website_for_text", "text = ", text)
-        text, error = scrape_dynamic_website_for_text(url)
-        if text:
-            return text, ""
-        return "", f"{error}"
-
-    return text, ""
-
-
-# def scrape_dynamic_website_for_text(url: str) -> tuple[str]:
-#     print(f"{__name__}.scrape_dynamic_website_for_text")
-
-#     executable_path = rf"{os.getcwd()}/geckodriver"
-#     print(
-#         f"{__name__}.scrape_dynamic_website_for_text",
-#         "executable_path = ",
-#         executable_path,
-#     )
-
-#     print("")
-#     print(os.listdir(os.getcwd()))
-#     print("")
-#     print("os.path.isfile(executable_path) = ", os.path.isfile(executable_path))
-#     import platform
-
-#     print("os.name = ", os.name)
-#     print("platform.system() = ", platform.system())
-#     print("platform.release() = ", platform.release())
-#     print("")
-#     print("")
-
-#     firefox_service = Service(executable_path)
-
-#     firefox_options = webdriver.FirefoxOptions()
-#     firefox_options.add_argument("--headless")
-#     firefox_options.add_argument("--headless")
-#     firefox_options.add_argument("--no-sandbox")
-#     firefox_options.add_argument("--disable-gpu")
-#     firefox_options.add_argument("--window-size=1280x1696")
-#     # firefox_options.add_argument("--user-data-dir=/tmp/user-data")
-#     firefox_options.add_argument("--hide-scrollbars")
-#     firefox_options.add_argument("--enable-logging")
-#     firefox_options.add_argument("--log-level=0")
-#     firefox_options.add_argument("--v=99")
-#     firefox_options.add_argument("--single-process")
-#     # firefox_options.add_argument("--data-path=/tmp/data-path")
-#     firefox_options.add_argument("--ignore-certificate-errors")
-#     # firefox_options.add_argument("--homedir=/tmp")
-#     # firefox_options.add_argument(f"--binary_location={os.getcwd()}")
-#     # firefox_options.add_argument("--disk-cache-dir=/tmp/cache-dir")
-#     headers = get_random_headers()
-#     firefox_options.add_argument(f"user-agent={headers['User-Agent']}")
-#     # firefox_options.executable_path = os.getcwd()
-#     # firefox_options.binary_location = executable_path
-
-#     print(
-#         f"{__name__}.scrape_dynamic_website_for_text",
-#         "firefox_options = ",
-#         firefox_options,
-#     )
-
-#     try:
-#         driver = webdriver.Firefox(
-#             service=firefox_service,
-#             options=firefox_options,
-#         )
-#     except Exception as e:
-#         print(f"{__name__}.scrape_dynamic_website_for_text", "e = ", e)
-#         return "", f"{e}"
-
-#     print(f"{__name__}.scrape_dynamic_website_for_text", "driver = ", driver)
-#     driver.get(url)
-
-#     texts = []
-#     elements = driver.find_elements(By.TAG_NAME, "p")
-#     for element in elements:
-#         text = element.text
-#         if text:
-#             texts.append(text)
-#     text = " ".join(texts)
-#     error = "" if text else "Failed to scrape dynamic website for text."
-#     return text, error
-
-
-def scrape(url: str):
-    logger.debug(f"Scraping {url}")
-    text, error = scrape_website_for_text(url)
     # remove excessive white space
     text = " ".join([t for t in text.split(" ") if t])
-    content_type = ""
-    scraped_on = f"{datetime.datetime.utcnow()}"
-    is_reachable = len(text) > 0 and len(error) == 0
-    logger.debug(f"{len(text) = }")
-    logger.debug(f"{len(error) = }")
-    logger.debug(f"{is_reachable = }")
 
-    return {
-        "url": url,
-        "text": text,
-        "content_type": content_type,
-        "scraped_on": scraped_on,
-        "is_reachable": is_reachable,
-        "error": error,
-    }
+    # Check if the website is reachable
+    is_reachable = len(text) > 0 and len(error) == 0
+
+    # check if the website is dynamic
+    if not text:
+        logger.debug(f"{text = }")
+        text, error = scrape_dynamic_website_for_text(url)
+        if text:
+            data["text"] = text
+            return data
+        data["error"] = f"{error}"
+        return data
+
+    data["text"] = text
+
+    return data
+
+
+def scrape_dynamic_website_for_text(url: str) -> tuple[str]:
+    logger.debug(f"Scraping dynamic website for text {url = }")
+
+    firefox_service = Service()
+    logger.debug(f"{firefox_service = }")
+
+    firefox_options = webdriver.FirefoxOptions()
+    firefox_options.add_argument("--headless")
+    firefox_options.add_argument("--headless")
+    firefox_options.add_argument("--no-sandbox")
+    firefox_options.add_argument("--disable-gpu")
+    firefox_options.add_argument("--window-size=1280x1696")
+    firefox_options.add_argument("--hide-scrollbars")
+    firefox_options.add_argument("--enable-logging")
+    firefox_options.add_argument("--log-level=0")
+    firefox_options.add_argument("--v=99")
+    firefox_options.add_argument("--single-process")
+    firefox_options.add_argument("--ignore-certificate-errors")
+    headers = get_random_headers()
+    firefox_options.add_argument(f"user-agent={headers['User-Agent']}")
+
+    logger.debug(f"{firefox_options = }")
+
+    try:
+        driver = webdriver.Firefox(
+            service=firefox_service,
+            options=firefox_options,
+        )
+    except Exception as e:
+        logger.debug(f"Scraping failed {e = }")
+        return "", f"{e}"
+
+    driver.get(url)
+
+    texts = []
+    tag_names = ["h1", "h2", "h3", "h4", "p"]
+    for tag_name in tag_names:
+        elements = driver.find_elements(By.TAG_NAME, tag_name)
+        for element in elements:
+            text = element.text
+            if text:
+                texts.append(text)
+    text = " ".join(texts)
+    error = "" if text else "Failed to scrape dynamic website for text."
+    return text, error
 
 
 def main():
+    logger.debug(f"{sys.argv = }")
     url = sys.argv[1]
-    x = scrape(url)
-    print(x)
+    data = scrape_website_for_text(url)
+    print(data)
 
 
 if __name__ == "__main__":
