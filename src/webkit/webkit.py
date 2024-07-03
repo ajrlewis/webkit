@@ -80,6 +80,8 @@ def sanitize_url(url: str) -> str:
     # TODO (ajrl) This shouldn't happen
     sanitized_url = sanitized_url.replace("///", "//")
 
+    sanitized_url = sanitized_url.replace("www.", "")
+
     logger.debug(f"{sanitized_url = }")
 
     return sanitized_url
@@ -125,8 +127,9 @@ def scrape_website_for_text(url: str) -> dict:
     data["url"] = url
 
     # get the content type returned
-    content_type = requests.head(url).headers["Content-Type"]
-    data["content_type"] = content_type
+    content_type = requests.head(url).headers.get("Content-Type")
+    if content_type:
+        data["content_type"] = content_type
 
     # get the website response
     try:
@@ -174,20 +177,17 @@ def scrape_website_for_text(url: str) -> dict:
     # remove excessive white space
     text = " ".join([t for t in text.split(" ") if t])
 
-    # Check if the website is reachable
+    # Check if the website is scraped successfully
     is_reachable = len(text) > 0 and len(error) == 0
+
+    data["text"] = text
 
     # check if the website is dynamic
     if not text:
         logger.debug(f"{text = }")
         text, error = scrape_dynamic_website_for_text(url)
-        if text:
-            data["text"] = text
-            return data
+        data["text"] = text
         data["error"] = f"{error}"
-        return data
-
-    data["text"] = text
 
     return data
 
