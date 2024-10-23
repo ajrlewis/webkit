@@ -1,3 +1,4 @@
+import datetime
 import random
 import re
 from typing import Optional
@@ -86,12 +87,16 @@ def text_from_url(url: str) -> dict:
         text = text_from_html(body)
         logger.debug(f"{text = }")
         return {
+            "url": url,
             "sanitized_url": sanitized_url,
             "redirected_url": f"{redirected_url}",
             "text": text,
+            "scraped_on": f"{datetime.datetime.utcnow()}",
         }
     return {
+        "url": url,
         "sanitized_url": sanitized_url,
         "redirected_url": f"{redirected_url}",
         "text": text,
+        "scraped_on": f"{datetime.datetime.utcnow()}",
     }
