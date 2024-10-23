@@ -1,2 +1,2 @@
-import scrape
-import search
+from . import scrape
+from . import search
