@@ -6,27 +6,9 @@ import urllib.parse
 
 from bs4 import BeautifulSoup
 from bs4.element import Comment, Doctype
+import fake_useragent
 import httpx
 from loguru import logger
-
-
-list_of_headers = [
-    {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"
-    },
-    {
-        "User-Agent": "Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)"
-    },
-    {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-    },
-    {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.3"
-    },
-    {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.97 Safari/537.3"
-    },
-]
 
 
 def sanitize_url(url: str) -> str:
@@ -38,34 +20,34 @@ def sanitize_url(url: str) -> str:
     return url
 
 
-def get_response(url: str) -> Optional[httpx.Response]:
+def get_response(url: str) -> tuple[Optional[httpx.Response], Optional[str]]:
     logger.debug(f"{url = }")
-    headers = random.choice(list_of_headers)
+    ua = fake_useragent.UserAgent()
+    headers = {"User-Agent": ua.random}
     logger.debug(f"{headers = }")
+    cookies = {"session_id": "1234567890"}
+    logger.debug(f"{cookies = }")
+    response = None
+    error = None
     try:
-        response = httpx.get(url, headers=headers, follow_redirects=True)
+        response = httpx.get(
+            url, headers=headers, cookies=cookies, follow_redirects=True
+        )
+        logger.debug(f"{response = }")
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
-        logger.error(f"{e = }")
-    else:
-        return response
-
-
-# Return error as well
-# def get_response(url: str) -> Optional[httpx.Response], str:
-#     headers = random.choice(list_of_headers)
-#     try:
-#         response = httpx.get(url, headers=headers, follow_redirects=True)
-#         response.raise_for_status()
-#         return response
-#     except httpx.HTTPStatusError as e:
-#         logger.error(f"Error making request to {url}: {e}")
-#     except httpx.TimeoutException:
-#         logger.error(f"Timeout error making request to {url}")
-#     except httpx.ConnectionError:
-#         logger.error(f"Connection error making request to {url}")
-#     except Exception as e:
-#         logger.error(f"Unknown error making request to {url}: {e}")
+        error = f"Error making request to {url}: {e}"
+        logger.error(error)
+    except httpx.TimeoutException as e:
+        error = f"Timeout error making request to {url}: {e}"
+        logger.error(error)
+    except httpx.ConnectError as e:
+        error = f"Connection error making request to {url}: {e}"
+        logger.error(error)
+    except Exception as e:
+        error = f"Unknown error making request to {url}: {e}"
+        logger.error(error)
+    return response, error
 
 
 def tag_visible(element: Doctype) -> bool:
@@ -100,24 +82,24 @@ def text_from_url(url: str) -> dict:
     data = {
         "url": url,
         "sanitized_url": sanitized_url,
-        "redirected_url": "",
-        "text": "",
-        "error": "",
+        "redirected_url": None,
+        "text": None,
+        "error": None,
+        "is_reachable": True,
         "scraped_on": f"{datetime.datetime.now(datetime.UTC)}",
     }
     logger.debug(f"{data = }")
-    response = get_response(sanitized_url)
+    response, error = get_response(sanitized_url)
     logger.debug(f"{response = }")
-    if response:
+    if error:
+        data["error"] = error
+        data["is_reachable"] = False
+    else:
         redirected_url = response.url
         logger.debug(f"{redirected_url = }")
         body = response.text
         text = text_from_html(body)
         logger.debug(f"{text = }")
-        data["text"] = text
         data["redirected_url"] = f"{redirected_url}"
+        data["text"] = text
     return data
-
-
-x = text_from_url("ajrlewis.com")
-logger.info(x)
