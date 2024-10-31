@@ -73,6 +73,7 @@ def text_from_html(markup: str, features: str = "html.parser") -> str:
     visible_text = " ".join(visible_text.strip() for visible_text in visible_texts)
     visible_text = visible_text.strip()
     visible_text = re.sub(" +", " ", visible_text)
+    visible_text = visible_text.encode("utf-8")
     return visible_text
 
 
@@ -100,7 +101,7 @@ def text_from_url(url: str) -> dict:
         logger.debug(f"{redirected_url = }")
         body = response.text
         text = text_from_html(body)
-        logger.debug(f"{text = }")
+        # logger.debug(f"{text = }")
         data["redirected_url"] = f"{redirected_url}"
         data["text"] = text
     return data
