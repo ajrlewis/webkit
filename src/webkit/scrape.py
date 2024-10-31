@@ -12,6 +12,7 @@ from loguru import logger
 
 
 def sanitize_url(url: str) -> str:
+    logger.debug(f"{url = }")
     if not urllib.parse.urlparse(url).scheme:
         if "http" in url:
             url = url.replace("http", "")
@@ -86,7 +87,7 @@ def text_from_url(url: str) -> dict:
         "text": None,
         "error": None,
         "is_reachable": True,
-        "scraped_on": f"{datetime.datetime.now(datetime.UTC)}",
+        "scraped_on": datetime.datetime.utcnow(),
     }
     logger.debug(f"{data = }")
     response, error = get_response(sanitized_url)
