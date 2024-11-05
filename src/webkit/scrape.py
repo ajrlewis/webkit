@@ -104,7 +104,7 @@ def anchors_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
             if href.startswith("/") and root_url:
                 href = f"{root_url}{href}"
             hrefs.append(href)
-    hrefs = list(set(hrefs))
+    hrefs = sorted(list(set(hrefs)))
     anchors = [{"href": href} for href in hrefs]
     return anchors
 
