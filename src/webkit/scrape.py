@@ -79,13 +79,15 @@ def text_from_soup(soup: BeautifulSoup) -> str:
     return visible_text
 
 
-def images_from_soup(soup: BeautifulSoup) -> list[dict]:
+def images_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     tags = soup.find_all("img")
     images = []
     for tags in tags:
         attrs = tags.attrs
         if alt := attrs.get("alt"):
             if src := attrs.get("src"):
+                if src.startswith("/") and root_url:
+                    src = f"{root_url}{src}"
                 images.append({"alt": alt, "src": src})
     return images
 
@@ -131,10 +133,8 @@ def data_from_url(url: str) -> dict:
         body = response.text
         soup = soup_from_markup(markup=body, features="html.parser")
         text = text_from_soup(soup)
-        images = images_from_soup(soup)
-        images = [f"{redirected_url}{t}" for t in images if t.startswith("/")]
+        images = images_from_soup(soup, root_url=redirected_url)
         anchors = anchors_from_soup(soup)
-        anchors = [f"{redirected_url}{t}" for t in anchors if t.startswith("/")]
         data["text"] = text
         data["image_tags"] = images
         data["anchor_tags"] = anchors
