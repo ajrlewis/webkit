@@ -132,7 +132,9 @@ def data_from_url(url: str) -> dict:
         soup = soup_from_markup(markup=body, features="html.parser")
         text = text_from_soup(soup)
         images = images_from_soup(soup)
+        images = [f"{redirected_url}{t}" for t in images if t.startswith("/")]
         anchors = anchors_from_soup(soup)
+        anchors = [f"{redirected_url}{t}" for t in anchors if t.startswith("/")]
         data["text"] = text
         data["image_tags"] = images
         data["anchor_tags"] = anchors
