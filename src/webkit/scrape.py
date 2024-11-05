@@ -82,7 +82,7 @@ def text_from_soup(soup: BeautifulSoup) -> str:
 def images_from_soup(soup: BeautifulSoup) -> list[dict]:
     tags = soup.find_all("img")
     images = []
-    for tags in tagss:
+    for tags in tags:
         attrs = tags.attrs
         if alt := attrs.get("alt"):
             if src := attrs.get("src"):
