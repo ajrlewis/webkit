@@ -92,12 +92,17 @@ def images_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     return images
 
 
-def anchors_from_soup(soup: BeautifulSoup) -> list[dict]:
+def anchors_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     tags = soup.find_all("a", href=True)
     hrefs = [tag.get("href") for tag in tags]
-    anchors = [
-        {"href": href} for href in hrefs if not href.startswith("#") and len(href) > 1
-    ]
+    anchors = []
+    for tag in tags:
+        if href := tag.get("href"):
+            if href.startswith("#") and len(href) <= 1:
+                continue
+            if href.startswith("/") and root_url:
+                href = f"{root_url}{href}"
+            anchors.append({"href": href})
     return anchors
 
 
@@ -134,7 +139,7 @@ def data_from_url(url: str) -> dict:
         soup = soup_from_markup(markup=body, features="html.parser")
         text = text_from_soup(soup)
         images = images_from_soup(soup, root_url=redirected_url)
-        anchors = anchors_from_soup(soup)
+        anchors = anchors_from_soup(soup, root_url=redirected_url)
         data["text"] = text
         data["image_tags"] = images
         data["anchor_tags"] = anchors
