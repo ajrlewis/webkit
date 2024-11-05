@@ -5,7 +5,7 @@ from typing import Optional
 import urllib.parse
 
 from bs4 import BeautifulSoup
-from bs4.element import Comment, Doctype
+from bs4.element import Comment, Doctype, Tag
 import fake_useragent
 import httpx
 from loguru import logger
@@ -21,13 +21,27 @@ def sanitize_url(url: str) -> str:
     return url
 
 
+def is_element_visible(element: Doctype) -> bool:
+    if element.parent.name in [
+        "style",
+        "script",
+        "head",
+        "title",
+        "meta",
+        "[document]",
+    ]:
+        return False
+    if isinstance(element, Comment):
+        return False
+    return True
+
+
 def get_response(url: str) -> tuple[Optional[httpx.Response], Optional[str]]:
     logger.debug(f"{url = }")
     ua = fake_useragent.UserAgent()
     headers = {"User-Agent": ua.random}
-    logger.debug(f"{headers = }")
     cookies = {"session_id": "1234567890"}
-    logger.debug(f"{cookies = }")
+    logger.debug(f"{headers = } {cookies = }")
     response = None
     error = None
     try:
@@ -51,33 +65,46 @@ def get_response(url: str) -> tuple[Optional[httpx.Response], Optional[str]]:
     return response, error
 
 
-def tag_visible(element: Doctype) -> bool:
-    if element.parent.name in [
-        "style",
-        "script",
-        "head",
-        "title",
-        "meta",
-        "[document]",
-    ]:
-        return False
-    if isinstance(element, Comment):
-        return False
-    return True
-
-
-def text_from_html(markup: str, features: str = "html.parser") -> str:
-    soup = BeautifulSoup(markup=markup, features=features)
+def text_from_soup(soup: BeautifulSoup) -> str:
+    # Get all text
     texts = soup.findAll(string=True)
-    visible_texts = filter(tag_visible, texts)
+    # Only get visible text
+    visible_texts = filter(is_element_visible, texts)
     visible_text = " ".join(visible_text.strip() for visible_text in visible_texts)
+    # Remove excessive white space.
     visible_text = visible_text.strip()
     visible_text = re.sub(" +", " ", visible_text)
+    # Encode text
     visible_text = visible_text.encode("utf-8")
     return visible_text
 
 
-def text_from_url(url: str) -> dict:
+def images_from_soup(soup: BeautifulSoup) -> list[dict]:
+    tags = soup.find_all("img")
+    images = []
+    for tags in tagss:
+        attrs = tags.attrs
+        if alt := attrs.get("alt"):
+            if src := attrs.get("src"):
+                images.append({"alt": alt, "src": src})
+    return images
+
+
+def anchors_from_soup(soup: BeautifulSoup) -> list[dict]:
+    tags = soup.find_all("a", href=True)
+    hrefs = [tag.get("href") for tag in tags]
+    anchors = [
+        {"href": href} for href in hrefs if not href.startswith("#") and len(href) > 1
+    ]
+    return anchors
+
+
+def soup_from_markup(markup: str, features: str = "html.parser") -> BeautifulSoup:
+    soup = BeautifulSoup(markup=markup, features=features)
+    return soup
+
+
+def data_from_url(url: str) -> dict:
     logger.debug(f"{url = }")
     sanitized_url = sanitize_url(url)
     logger.debug(f"{sanitized_url = }")
@@ -86,6 +113,8 @@ def text_from_url(url: str) -> dict:
         "sanitized_url": sanitized_url,
         "redirected_url": None,
         "text": None,
+        "image_tags": None,
+        "anchor_tags": None,
         "error": None,
         "is_reachable": True,
         "scraped_on": datetime.datetime.utcnow(),
@@ -100,8 +129,12 @@ def text_from_url(url: str) -> dict:
         redirected_url = response.url
         logger.debug(f"{redirected_url = }")
         body = response.text
-        text = text_from_html(body)
-        # logger.debug(f"{text = }")
-        data["redirected_url"] = f"{redirected_url}"
+        soup = soup_from_markup(markup=body, features="html.parser")
+        text = text_from_soup(soup)
+        images = images_from_soup(soup)
+        anchors = anchors_from_soup(soup)
         data["text"] = text
+        data["image_tags"] = images
+        data["anchor_tags"] = anchors
+        data["redirected_url"] = f"{redirected_url}"
     return data
