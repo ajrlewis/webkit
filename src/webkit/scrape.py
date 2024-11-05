@@ -99,7 +99,7 @@ def anchors_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
         if href := tag.get("href"):
             if href.startswith("#") and len(href) <= 1:
                 continue
-          if href.endswith("/"):
+            if href.endswith("/"):
                 href = href[:-1]
             if href.startswith("/") and root_url:
                 href = f"{root_url}{href}"
