@@ -36,8 +36,10 @@ def is_element_visible(element: Doctype) -> bool:
     return True
 
 
-def get_response(url: str) -> tuple[Optional[httpx.Response], Optional[str]]:
-    logger.debug(f"{url = }")
+def get_response(
+    url: str, params: Optional[dict] = None
+) -> tuple[Optional[httpx.Response], Optional[str]]:
+    logger.debug(f"{url = } {params = }")
     ua = fake_useragent.UserAgent()
     headers = {"User-Agent": ua.random}
     cookies = {"session_id": "1234567890"}
@@ -46,7 +48,7 @@ def get_response(url: str) -> tuple[Optional[httpx.Response], Optional[str]]:
     error = None
     try:
         response = httpx.get(
-            url, headers=headers, cookies=cookies, follow_redirects=True
+            url, params=params, headers=headers, cookies=cookies, follow_redirects=True
         )
         logger.debug(f"{response = }")
         response.raise_for_status()
