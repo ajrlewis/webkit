@@ -16,10 +16,10 @@ google_search_api_key = os.getenv("GOOGLE_SEARCH_API_KEY")
 google_search_id = os.getenv("GOOGLE_SEARCH_ID")
 
 
-def duckduckgo_search(keywords: str, max_results: int = 10) -> list[dict]:
-    logger.debug(f"{keywords = } {max_results = }")
+def duckduckgo(query: str, max_results: int = 10) -> list[dict]:
+    logger.debug(f"{query = } {max_results = }")
     try:
-        results = DDGS().text(keywords, safesearch="off", max_results=max_results)
+        results = DDGS().text(query, safesearch="off", max_results=max_results)
         logger.debug(f"{len(results)} results found.")
     except DuckDuckGoSearchException as e:
         logger.error(f"DuckDuckGoSearchException: {e}")
@@ -36,7 +36,7 @@ def duckduckgo_search(keywords: str, max_results: int = 10) -> list[dict]:
     return results
 
 
-def google_search(query: str, max_results: int = 10) -> list[dict]:
+def google(query: str, max_results: int = 10) -> list[dict]:
     """https://developers.google.com/custom-search/v1/overview"""
     search_results = []
     if not google_search_api_key or not google_search_id:
