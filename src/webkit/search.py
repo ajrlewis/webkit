@@ -49,6 +49,7 @@ def google(query: str, max_results: int = 10) -> list[dict]:
         "cx": google_search_id,
         "key": google_search_api_key,
         "q": query,
+        # "sort": "date",
         "num": max_results,
         "start": 1,
     }
