@@ -12,7 +12,7 @@ def google(query: str, max_results: int = 10) -> list[dict]:
         if href := result.get("href"):
             logger.debug(f"{href = }".encode("UTF-8"))
             data = scrape.data_from_url(url=href)
-            logger.debug(f"{data = }".encode("UTF-8"))
+            # logger.debug(f"{data = }".encode("UTF-8"))
             if body := data.get("text"):
                 deep_result = result | {"body": body}
                 deep_results.append(deep_result)

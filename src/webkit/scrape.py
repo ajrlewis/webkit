@@ -131,7 +131,7 @@ def data_from_url(url: str) -> dict:
         "is_reachable": True,
         "scraped_on": datetime.datetime.utcnow(),
     }
-    logger.debug(f"{data = }")
+    # logger.debug(f"{data = }")
     response, error = get_response(sanitized_url)
     logger.debug(f"{response = }")
     if error:
