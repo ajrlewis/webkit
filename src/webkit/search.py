@@ -67,7 +67,7 @@ def google(query: str, max_results: int = 10) -> list[dict]:
                 search_result["href"] = search_result.pop("link")
                 search_results.append(search_result)
         except Exception as e:
-            return []
+            return search_results
     else:
         logger.debug(f"{error = }".encode("UTF-8"))
     logger.debug(f"{search_results = }".encode("UTF-8"))
