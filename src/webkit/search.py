@@ -55,19 +55,20 @@ def google(query: str, max_results: int = 10) -> list[dict]:
     }
     response, error = scrape.get_response(url, params=params)
     if response:
-        logger.info(f"{response = }".encode("UTF-8"))
+        logger.debug(f"{response = }".encode("UTF-8"))
         try:
             data = response.json()
             items = data.get("items", [])
             keys = ("title", "link", "snippet")
             for item in items:
                 search_result = {k: v for k, v in item.items() if k in keys}
-                search_result["body"] = search_result.pop("snippet")
+                search_result["snippet"] = search_result.pop("snippet")
+                search_result["body"] = ""
                 search_result["href"] = search_result.pop("link")
                 search_results.append(search_result)
         except Exception as e:
             return []
     else:
-        logger.info(f"{error = }".encode("UTF-8"))
-    logger.info(f"{search_results = }".encode("UTF-8"))
+        logger.debug(f"{error = }".encode("UTF-8"))
+    logger.debug(f"{search_results = }".encode("UTF-8"))
     return search_results
