@@ -5,6 +5,7 @@ from loguru import logger
 
 from . import scrape
 
+# Check the environmental variables are configured.
 load_dotenv()
 google_search_api_key = os.getenv("GOOGLE_SEARCH_API_KEY")
 google_search_id = os.getenv("GOOGLE_SEARCH_ID")
