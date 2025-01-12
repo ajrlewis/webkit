@@ -73,7 +73,7 @@ def get_response(
     return response, error
 
 
-def text_from_soup(soup: BeautifulSoup) -> str:
+def text_from_soup(soup: BeautifulSoup, max_words: int = 1000) -> str:
     # Get all text
     texts = soup.findAll(string=True)
     # Only get visible text
@@ -82,6 +82,10 @@ def text_from_soup(soup: BeautifulSoup) -> str:
     # Remove excessive white space.
     visible_text = visible_text.strip()
     visible_text = re.sub(" +", " ", visible_text)
+    # Crop to maximum words
+    visible_words = visible_text.split(" ")
+    visible_words = visible_words[:max_words]
+    visible_text = " ".join(visible_words)
     # Encode text
     visible_text = visible_text.encode("utf-8")
     return visible_text
@@ -139,7 +143,10 @@ def data_from_url(url: str) -> dict:
     }
     # logger.debug(f"{data = }")
     response, error = get_response(sanitized_url)
-    logger.debug(f"{response = }")
+    content_type = response.headers.get("Content-Type")
+    if content_type != "text/html":
+        error = 'Content type is not "text/html"'
+    logger.debug(f"{response = } {content_type = }")
     if error:
         data["error"] = error
         data["is_reachable"] = False
