@@ -37,7 +37,7 @@ def is_element_visible(element: Doctype) -> bool:
 
 
 def get_response(
-    url: str, params: Optional[dict] = None, timeout: int = 5
+    url: str, params: Optional[dict] = None, timeout: int = 20
 ) -> tuple[Optional[httpx.Response], Optional[str]]:
     logger.debug(f"{url = } {params = }")
     ua = fake_useragent.UserAgent()
