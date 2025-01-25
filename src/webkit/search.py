@@ -22,6 +22,7 @@ def google(
     query: str,
     max_results: int = 10,
     page_start: int = 1,
+    sort_by: Optional[str] = None,
     should_scrape_links: bool = False,
 ) -> list[dict]:
     """https://developers.google.com/custom-search/v1/overview"""
@@ -34,10 +35,11 @@ def google(
         "cx": google_search_id,
         "key": google_search_api_key,
         "q": query,
-        # "sort": "date",
         "num": max_results,
         "start": page_start,
     }
+    if sort_by:
+        params["sort"] = sort_by
     response, error = scrape.get_response(url, params=params)
     logger.debug(f"{response = } {error = }".encode("UTF-8"))
 
@@ -55,17 +57,14 @@ def google(
         return search_results
     logger.debug(f"{search_results = }".encode("UTF-8"))
 
-    # Scrape the search result links to get website body.
-    if should_scrape_links:
-        _search_results = []
-        for search_result in search_results:
-            _search_result = search_result
-            if href := search_result.get("href"):
-                logger.debug(f"{href = }".encode("UTF-8"))
-                data = scrape.data_from_url(url=href)
-                if body := data.get("text"):
-                    _search_result = _search_result | {"body": body}
-            _search_results.append(_search_result)
-        search_results = _search_results
+    # # Scrape the search result links to get website body.
+    # if should_scrape_links:
+    #     _search_results = []
+    #     for search_result in search_results:
+    #         _search_result = search_result
+    #         if data := scrape.data_from_search_result(search_result):
+    #             _search_result = _search_result | {"body": body}
+    #         _search_results.append(_search_result)
+    #     search_results = _search_results
 
     return search_results
