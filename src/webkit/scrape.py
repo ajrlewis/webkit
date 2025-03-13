@@ -163,3 +163,10 @@ def data_from_url(url: str) -> dict:
         data["anchor_tags"] = anchors
         data["redirected_url"] = f"{redirected_url}"
     return data
+
+
+def data_from_search_result(search_result: dict) -> Optional[dict]:
+    if href := search_result.get("href"):
+        logger.debug(f"{href = }".encode("UTF-8"))
+        data = scrape.data_from_url(url=href)
+        return data
