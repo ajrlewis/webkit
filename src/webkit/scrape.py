@@ -21,7 +21,7 @@ def sanitize_url(url: str) -> str:
     return url
 
 
-def is_element_visible(element: Doctype) -> bool:
+def _is_element_visible(element: Doctype) -> bool:
     if element.parent.name in [
         "style",
         "script",
@@ -37,11 +37,11 @@ def is_element_visible(element: Doctype) -> bool:
 
 
 def get_response(
-    url: str, params: Optional[dict] = None, timeout: int = 20
+    url: str, params: Optional[dict] = None, headers: dict = {}, timeout: int = 20
 ) -> tuple[Optional[httpx.Response], Optional[str]]:
-    logger.debug(f"{url = } {params = }")
+    logger.debug(f"{url = }")
     ua = fake_useragent.UserAgent()
-    headers = {"User-Agent": ua.random}
+    headers = headers | {"User-Agent": ua.random}
     cookies = {"session_id": "1234567890"}
     timeout = httpx.Timeout(timeout)
     logger.debug(f"{headers = } {cookies = } {timeout = }")
@@ -57,6 +57,7 @@ def get_response(
             follow_redirects=True,
         )
         logger.debug(f"{response = }")
+        logger.debug(f"{response.text = }")
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
         error = f"Error making request to {url}: {e}"
@@ -73,11 +74,11 @@ def get_response(
     return response, error
 
 
-def text_from_soup(soup: BeautifulSoup, max_words: int = 1000) -> str:
+def _text_from_soup(soup: BeautifulSoup, max_words: int = 1000) -> str:
     # Get all text
     texts = soup.findAll(string=True)
     # Only get visible text
-    visible_texts = filter(is_element_visible, texts)
+    visible_texts = filter(_is_element_visible, texts)
     visible_text = " ".join(visible_text.strip() for visible_text in visible_texts)
     # Remove excessive white space.
     visible_text = visible_text.strip()
@@ -91,7 +92,7 @@ def text_from_soup(soup: BeautifulSoup, max_words: int = 1000) -> str:
     return visible_text
 
 
-def images_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
+def _images_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     tags = soup.find_all("img")
     images = []
     for tags in tags:
@@ -104,7 +105,7 @@ def images_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     return images
 
 
-def anchors_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
+def _anchors_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     tags = soup.find_all("a", href=True)
     hrefs = []
     for tag in tags:
@@ -121,7 +122,7 @@ def anchors_from_soup(soup: BeautifulSoup, root_url: str = "") -> list[dict]:
     return anchors
 
 
-def soup_from_markup(markup: str, features: str = "html.parser") -> BeautifulSoup:
+def _soup_from_markup(markup: str, features: str = "html.parser") -> BeautifulSoup:
     soup = BeautifulSoup(markup=markup, features=features)
     return soup
 
@@ -141,10 +142,10 @@ def data_from_url(url: str) -> dict:
         "is_reachable": True,
         "scraped_on": datetime.datetime.utcnow(),
     }
-    # logger.debug(f"{data = }")
     response, error = get_response(sanitized_url)
     content_type = response.headers.get("Content-Type")
-    if content_type != "text/html":
+    if "text/html" not in content_type:
+        logger.error(f"{content_type = }")
         error = 'Content type is not "text/html"'
     logger.debug(f"{response = } {content_type = }")
     if error:
@@ -154,10 +155,10 @@ def data_from_url(url: str) -> dict:
         redirected_url = response.url
         logger.debug(f"{redirected_url = }")
         body = response.text
-        soup = soup_from_markup(markup=body, features="html.parser")
-        text = text_from_soup(soup)
-        images = images_from_soup(soup, root_url=redirected_url)
-        anchors = anchors_from_soup(soup, root_url=redirected_url)
+        soup = _soup_from_markup(markup=body, features="html.parser")
+        text = _text_from_soup(soup)
+        images = _images_from_soup(soup, root_url=redirected_url)
+        anchors = _anchors_from_soup(soup, root_url=redirected_url)
         data["text"] = text
         data["image_tags"] = images
         data["anchor_tags"] = anchors
